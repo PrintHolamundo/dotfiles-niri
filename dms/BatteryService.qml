@@ -91,15 +91,6 @@ Singleton {
         }
     }
 
-    Timer {
-        id: peripheralPollTimer
-        interval: 30000
-        repeat: true
-        running: true
-        onTriggered: {
-            Quickshell.execDetached(["get-peripherals"]);
-        }
-    }
 
     readonly property string preferredBatteryOverride: Quickshell.env("DMS_PREFERRED_BATTERY")
 
