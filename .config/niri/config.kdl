@@ -6,3 +6,10 @@ include "./cfg/display.kdl"
 include "./cfg/layout.kdl"
 include "./cfg/rules.kdl"
 include "./cfg/misc.kdl"
+
+// DankMaterialShell (DMS)
+include optional=true "dms/colors.kdl"
+include optional=true "dms/layout.kdl"
+include optional=true "dms/alttab.kdl"
+include optional=true "dms/cursor.kdl"
+

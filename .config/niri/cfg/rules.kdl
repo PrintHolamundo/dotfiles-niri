@@ -23,12 +23,13 @@
         default-window-height { fixed 550; }
     }
 
-    // Floating Noctalia settings window.
+    // Floating DMS window
     window-rule {
-        match app-id="dev.noctalia.Noctalia"
+        match app-id="^com.danklinux.dms$"
         open-floating true
-        default-column-width { fixed 1080; }
-        default-window-height { fixed 920; }
+        background-effect {
+            xray false
+        }
     }
 
     // Floating Brave Gemini (Scratchpad pantalla completa flotante con transparencia suave)
@@ -58,16 +59,6 @@
         default-window-height { proportion 0.85; }
     }
 
-    // Floating Ryotunes (Scratchpad pantalla completa flotante con transparencia suave)
-    window-rule {
-        match app-id=r#"^org\.quickshell$"# title=r#"^Ryotunes"#
-        match app-id=r#"^ryotunes$"#
-        open-floating true
-        default-column-width { proportion 1.0; }
-        default-window-height { proportion 1.0; }
-        default-floating-position x=0 y=0 relative-to="top-left"
-        opacity 0.88
-    }
 
     // Omnissa Horizon Client (Ancho exacto de 1625px)
     window-rule {
@@ -89,14 +80,13 @@
     }
 
     layer-rule {
-        match namespace="^noctalia-wallpaper"
+        match namespace="^quickshell$"
         place-within-backdrop true
     }
 
     layer-rule {
-        match namespace="^noctalia-(bar-[^\"]+|notification|dock|panel|attached-panel|osd)$"
+        exclude namespace="^dms:bar$"
         background-effect {
-          xray false
-          // blur false
+            xray false
         }
     }

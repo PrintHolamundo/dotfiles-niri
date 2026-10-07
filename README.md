@@ -1,8 +1,8 @@
 # 🌌 Dotfiles: Niri & Custom Scripts
 
-Configuración completa y modular del compositor scrollable Wayland **Niri**, la terminal **Kitty**, y una suite de scripts personalizados para productividad, gestión de monitores, control de audio y utilidades del sistema.
+Configuración completa y modular del compositor scrollable Wayland **Niri**, la suite de escritorio **DankMaterialShell (DMS)**, la terminal **Kitty**, y una suite de scripts personalizados para productividad, gestión de hardware/monitores, control de audio y utilidades del sistema.
 
-Preparado para desplegarse fácilmente en cualquier distribución de Linux (Arch Linux, Fedora, Ubuntu/Debian, etc.).
+Preparado y optimizado especialmente para **Fedora** y extensible a cualquier distribución de Linux (Arch Linux, Ubuntu/Debian, etc.).
 
 ---
 
@@ -14,15 +14,20 @@ dotfiles-niri/
 │   ├── niri/                     # Configuración modular de Niri
 │   │   ├── config.kdl            # Archivo maestro que incluye los módulos
 │   │   ├── gpu.kdl               # Configuración de renderizado GPU
+│   │   ├── dms/                  # Módulos de integración con DankMaterialShell
+│   │   │   ├── colors.kdl        # Colores y temas sincronizados
+│   │   │   ├── layout.kdl        # Bordes activos/inactivos de DMS
+│   │   │   ├── alttab.kdl        # Configuración de conmutación de ventanas
+│   │   │   └── cursor.kdl        # Cursor integrado
 │   │   └── cfg/
 │   │       ├── animation.kdl     # Curvas y tiempos de animación
-│   │       ├── autostart.kdl     # Aplicaciones al iniciar sesión
-│   │       ├── display.kdl       # Configuración activa de salidas/monitores
+│   │       ├── autostart.kdl     # Aplicaciones y servicios al iniciar sesión
+│   │       ├── display.kdl       # Configuración de salidas/monitores (3440x1440@120Hz)
 │   │       ├── input.kdl         # Teclado, mouse, touchpad
-│   │       ├── keybinds.kdl      # Atajos de teclado completos
-│   │       ├── layout.kdl        # Espaciado (gaps), bordes, proporciones
-│   │       ├── misc.kdl          # Preferencias generales
-│   │       └── rules.kdl         # Reglas de ventanas (flotantes, scratchpads, tamaños)
+│   │       ├── keybinds.kdl      # Atajos de teclado completos (DMS + Apps)
+│   │       ├── layout.kdl        # Espaciado (gaps), proporciones y fondo
+│   │       ├── misc.kdl          # Preferencias generales y compatibilidad Wayland
+│   │       └── rules.kdl         # Reglas de ventanas (flotantes, scratchpads, Omnissa)
 │   ├── copyq/                    # Gestor de portapapeles CopyQ
 │   │   ├── copyq.conf            # Configuración principal
 │   │   ├── copyq-commands.ini    # Comandos (encriptación, etiquetas, fijar)
@@ -30,18 +35,21 @@ dotfiles-niri/
 │   └── kitty/                    # Terminal Kitty
 │       ├── kitty.conf            # Configuración principal
 │       ├── user.conf             # Preferencias de usuario (transparencia, clic derecho Windows-style)
+│       ├── dank-theme.conf       # Tema sincronizado con DMS
+│       ├── dank-tabs.conf        # Configuración de pestañas Dank
 │       ├── current-font.conf     # Fuente tipográfica
 │       ├── current-theme.conf    # Paleta de colores
 │       └── mouse_action.py       # Lógica personalizada de copiar/pegar con mouse
 ├── bin/                          # Suite de scripts ejecutables (~/.local/bin)
-│   ├── audio_*.sh                # Conmutadores de salida de audio (Blue, Bocinas, Audífonos)
+│   ├── audio_*.sh                # Conmutadores de salida de audio (Blue, Bocinas, Audífonos G535)
 │   ├── monitor_picker.py         # Selector interactivo de monitores y persistencia
 │   ├── ocr-grab                  # Capturador OCR de pantalla al portapapeles
 │   ├── show-batteries.sh         # Consulta rápida de baterías de periféricos
 │   ├── switch-session            # Conmutador entre sesiones (Niri, Hyprland, KDE)
-│   ├── toggle_*.sh               # Scratchpads interactivos (Kitty, Gemini, Btop, etc.)
+│   ├── toggle_*.sh               # Scratchpads interactivos (Kitty, Gemini, Omnissa, Btop)
 │   └── ...                       # Scripts de integración Sunshine / Headless / RGB
 ├── install.sh                    # Script instalador automático con detección de distro
+├── install-system-deps.sh        # Instalador de dependencias y drivers para Fedora
 └── README.md
 ```
 
@@ -54,7 +62,7 @@ Clona este repositorio y ejecuta el instalador:
 ```bash
 git clone https://github.com/PrintHolamundo/dotfiles-niri.git ~/dotfiles-niri
 cd ~/dotfiles-niri
-chmod +x install.sh
+chmod +x install.sh install-system-deps.sh
 ./install.sh
 ```
 
@@ -72,83 +80,104 @@ chmod +x install.sh
 
 ---
 
-## 📦 Dependencias y Paquetes por Distribución
+## 🖥️ Optimización de Hardware (Fedora)
 
-### Arch Linux / Arch-based (EndeavourOS, Manjaro, etc.)
+### GPU: NVIDIA GeForce RTX 5070 (Blackwell)
+- Controladores oficiales `akmod-nvidia` y `xorg-x11-drv-nvidia-cuda` desde RPM Fusion.
+- Módulos del kernel compilados y soporte para aceleración por hardware bajo Wayland.
 
-```bash
-paru -S --needed niri kitty copyq jq wl-clipboard grim slurp tesseract tesseract-data-eng tesseract-data-spa libnotify pipewire pipewire-pulse wireplumber btop python
-```
+### Pantalla Ultrawide (Xiaomi Mi Monitor 34")
+- Resolución nativa configurada a **3440x1440 @ 120.000 Hz** en `display.kdl` y `monitor_picker.py` para máxima estabilidad y fluidez sin parpadeos.
 
-### Fedora
-
-```bash
-# Habilitar repositorio copr de Niri
-sudo dnf copr enable yalter/niri
-sudo dnf install -y niri kitty copyq jq wl-clipboard grim slurp tesseract libnotify pipewire-pulseaudio wireplumber btop python3
-```
-
-### Debian / Ubuntu
-
-```bash
-sudo apt update
-sudo apt install -y kitty copyq jq wl-clipboard grim slurp tesseract-ocr libnotify-bin pulseaudio-utils btop python3
-# Para Niri, consulta la documentación oficial o descarga el binario/compila con cargo.
-```
+### Audio PipeWire
+- Scripts rápidos para alternar entre perfiles de audio sin abrir menús:
+  - Audífonos inalámbricos Logitech G535 (`Mod + Inicio`)
+  - Bocinas principales de escritorio (`Mod + RePág`)
+  - Interfaz / Micrófono Blue Microphones (`Mod + AvPág`)
 
 ---
 
 ## 🛠️ Scripts Personalizados Incluidos (`bin/`)
 
 ### 📌 Scratchpads y Ventanas Emergentes (Toggle)
-- **`toggle_kitty.sh`** (`Mod + T`): Despliega u oculta un terminal Kitty flotante en pantalla completa como scratchpad sin perturbar el mosaico activo.
+- **`toggle_kitty.sh`** (`Mod + T`): Despliega u oculta un terminal Kitty flotante como scratchpad sin perturbar el mosaico activo.
 - **`toggle_gemini.sh`** (`Mod + G`): Abre o conmuta la app de Brave Gemini en modo flotante y centrado.
 - **`toggle_system_monitor.sh`** (`Mod + Escape`): Abre o conmuta el monitor de recursos del sistema (`btop`).
-- **`toggle_omnissa.sh`** (`Mod + Z`): Alterna el cliente de escritorio remoto Omnissa Horizon.
-- **`toggle_ryotunes.sh`** (`Mod + M`): Conmuta el reproductor de música.
-- **`toggle_brave.sh`** / **`toggle_desktop.sh`**: Control y alternancia de navegadores y espacios.
+- **`toggle_omnissa.sh`** (`Mod + Z`): Alterna el cliente de escritorio remoto Omnissa Horizon en Workspace 2 con ancho calibrado.
+- **`toggle_brave.sh`** / **`toggle_desktop.sh`**: Control y alternancia de ventanas y espacios.
 
 ### 🔊 Gestión de Audio
 - **`audio_blue.sh`** (`Mod + AvPág`): Conmuta la salida por defecto al micrófono/DAC Blue Microphones.
 - **`audio_bocinas.sh`** (`Mod + RePág`): Conmuta la salida de audio a las bocinas principales.
-- **`audio_audifonos.sh`** (`Mod + Inicio`): Conmuta la salida de audio a los audífonos inalámbricos (Logitech G535).
+- **`audio_audifonos.sh`** (`Mod + Inicio`): Conmuta la salida de audio a los audífonos inalámbricos Logitech G535.
 - **`toggle_record_blue.sh`** (`Alt + F10`): Inicia o detiene la grabación directa del micrófono Blue en segundo plano.
-- **`ryoku-volume`**: Ajuste y control unificado de niveles de volumen.
 
 ### 🖥️ Monitores y Entorno
-- **`monitor_picker.py` / `monitor_picker.sh`** (`Mod + P`): Selector interactivo para activar, apagar o combinar pantallas conectadas (ej. DisplayPort, HDMI, ultra-wide) con persistencia automática en `display.kdl`.
+- **`monitor_picker.py` / `monitor_picker.sh`** (`Mod + P`): Selector interactivo para activar, apagar o combinar pantallas conectadas con persistencia automática en `display.kdl`.
 - **`niri-headless-check.sh`**: Detección y preparación de sesiones headless / virtuales en arranque.
 - **`sunshine_*`**: Scripts de integración para streaming remoto de Sunshine hacia clientes externos (MacBook, Moonlight).
 - **`switch-session`**: Utilidad para alternar de manera limpia entre escritorios (Niri, Hyprland, KDE Plasma) configurando SDDM autologin.
 
 ### ⚡ Herramientas y Productividad
-- **`ocr-grab`** (`Mod + Shift + T`): Permite seleccionar un área de la pantalla con `grim` + `slurp`, extraer el texto usando OCR (`tesseract`) y copiarlo al portapapeles al instante.
-- **`show-batteries.sh`** (`battery`, `bateria`): Notifica y reporta los niveles de batería de periféricos conectados (mouse, audífonos, etc.).
+- **`ocr-grab`** (`Mod + Shift + T`): Permite seleccionar un área de la pantalla con `grim` + `slurp`, extraer el texto usando OCR (`tesseract` en español e inglés) y copiarlo al portapapeles al instante.
+- **`show-batteries.sh`**: Notifica y reporta los niveles de batería de periféricos conectados (mouse, audífonos, etc.).
 - **`rgb-controller.sh`**: Control por software de iluminación de periféricos vía OpenRGB.
 
 ---
 
 ## ⌨️ Atajos de Teclado Principales (Cheat Sheet)
 
+### DankMaterialShell (DMS) & Sistema
+| Atajo | Acción |
+|---|---|
+| `Mod + Space` | Abrir lanzador de aplicaciones (DMS Spotlight) |
+| `Alt + Space` | Barra de búsqueda rápida (Spotlight Bar) |
+| `Mod + S` | Panel de Control / Dashboard |
+| `Mod + Shift + S` | Configuración del Sistema (DMS Settings) |
+| `Mod + Shift + Return` | Selector de Fondos de Pantalla (DMS Wallpaper) |
+| `Mod + Alt + L` | Bloqueo de pantalla (DMS Lock) |
+| `Mod + Shift + Q` | Menú de energía / Salir (DMS Powermenu) |
+
+### Aplicaciones y Productividad
 | Atajo | Acción |
 |---|---|
 | `Mod + Return` | Abrir terminal Kitty |
 | `Mod + B` | Abrir navegador Brave |
-| `Mod + E` | Abrir explorador de archivos (Nautilus) |
 | `Mod + N` | Abrir editor de código (VS Code) |
-| `Mod + V` / `Alt + V` | **Portapapeles:** Toggle CopyQ flotante |
-| `Mod + T` | **Scratchpad:** Toggle terminal Kitty flotante |
-| `Mod + G` | **Scratchpad:** Toggle Gemini AI |
-| `Mod + Escape` | **Scratchpad:** Toggle monitor de sistema (`btop`) |
-| `Mod + P` | Selector de monitores interactivo |
-| `Mod + Shift + T` | **OCR:** Capturar y extraer texto de la pantalla |
-| `Mod + Q` / `Mod + C` | Cerrar ventana activa |
-| `Mod + H / J / K / L` | Navegación entre columnas y ventanas |
-| `Mod + Shift + H / L` | Mover columna a la izquierda / derecha |
-| `Mod + F` | Alternar pantalla completa (fullscreen) |
-| `Mod + Shift + F` | Alternar ventana flotante |
-| `Mod + R` | Cambiar ancho de columna predefinido |
-| `Mod + Shift + Q` | Menú de sesión / Salir |
+| `Mod + E` | Abrir explorador de archivos (Nautilus) |
+| `Mod + Z` | Alternar Omnissa Horizon Client (Workspace 2) |
+| `Mod + V` / `Alt + V` | **Portapapeles:** Toggle CopyQ |
+| `Mod + T` | **Scratchpad:** Terminal Kitty flotante |
+| `Mod + G` | **Scratchpad:** Gemini AI (Brave App) |
+| `Mod + Escape` | **Scratchpad:** Monitor de sistema (`btop`) |
+| `Mod + P` | Selector interactivo de monitores |
+| `Mod + Shift + T` | **OCR:** Capturar y extraer texto de pantalla al portapapeles |
+
+### Gestión de Audio
+| Atajo | Acción |
+|---|---|
+| `Mod + Inicio` | Cambiar audio a Audífonos Logitech G535 |
+| `Mod + RePág` | Cambiar audio a Bocinas de escritorio |
+| `Mod + AvPág` | Cambiar audio a Micrófono / DAC Blue |
+| `XF86AudioRaiseVolume` | Subir volumen (DMS) |
+| `XF86AudioLowerVolume` | Bajar volumen (DMS) |
+| `XF86AudioMute` | Silenciar volumen (DMS) |
+| `Mod + Ctrl + Space` | Pausar / Reanudar reproducción multimedia |
+| `Mod + Ctrl + Right / Left` | Pista siguiente / anterior |
+
+### Ventanas y Navegación Niri
+| Atajo | Acción |
+|---|---|
+| `Mod + Q` | Cerrar ventana activa |
+| `Mod + H / J / K / L` | Navegación entre columnas y ventanas (izquierda/abajo/arriba/derecha) |
+| `Mod + Ctrl + H / L` | Mover columna a la izquierda / derecha |
+| `Mod + Ctrl + K / J` | Mover ventana arriba / abajo |
+| `Mod + F` | Maximizar columna |
+| `Mod + Shift + F` | Alternar pantalla completa (fullscreen) |
+| `Mod + Shift + V` | Alternar foco entre flotante y mosaico |
+| `Mod + R` / `Mod + Shift + R` | Cambiar ancho de columna predefinido (siguiente / anterior) |
+| `Mod + 1..9` | Cambiar al espacio de trabajo (Workspace) 1 a 9 |
+| `Mod + Ctrl + 1..9` | Mover columna al espacio de trabajo 1 a 9 |
 
 ---
 

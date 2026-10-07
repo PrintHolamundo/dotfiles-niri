@@ -104,24 +104,30 @@ install_packages() {
         fi
 
     elif [[ "$DISTRO_ID" == "fedora" || "$DISTRO_LIKE" =~ fedora ]]; then
-        info "Detectado Fedora. Verificando dependencias..."
-        local pkgs=(
-            kitty
-            copyq
-            jq
-            wl-clipboard
-            grim
-            slurp
-            tesseract
-            libnotify
-            pipewire-pulseaudio
-            wireplumber
-            btop
-            python3
-        )
-        sudo dnf install -y "${pkgs[@]}"
-        if ! command -v niri >/dev/null 2>&1; then
-            warn "Niri no está instalado. En Fedora puedes habilitar el copr: sudo dnf copr enable yalter/niri && sudo dnf install niri"
+        info "Detectado Fedora. Verificando repositorio y dependencias completas..."
+        if [ -f "$DOTFILES_DIR/install-system-deps.sh" ]; then
+            bash "$DOTFILES_DIR/install-system-deps.sh"
+        else
+            local pkgs=(
+                kitty
+                copyq
+                jq
+                wl-clipboard
+                grim
+                slurp
+                tesseract
+                tesseract-langpack-spa
+                tesseract-langpack-eng
+                libnotify
+                pipewire-pulseaudio
+                wireplumber
+                btop
+                fuzzel
+                nautilus
+                gh
+                python3
+            )
+            sudo dnf install -y "${pkgs[@]}"
         fi
 
     elif [[ "$DISTRO_ID" =~ debian|ubuntu || "$DISTRO_LIKE" =~ debian|ubuntu ]]; then

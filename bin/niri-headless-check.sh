@@ -48,8 +48,8 @@ else
     if [ "$DP1_STATUS" = "connected" ]; then
         echo "$(date -Iseconds) [BOOT-CHECK-NIRI] Activating fallback DP-1..." >> "$LOG"
         niri msg output DP-1 on >> "$LOG" 2>&1 || true
-        niri msg output DP-1 mode "3440x1440@144.000" >> "$LOG" 2>&1 || true
-        niri msg output DP-1 scale 1.25 >> "$LOG" 2>&1 || true
+        niri msg output DP-1 mode "3440x1440@120.000" >> "$LOG" 2>&1 || true
+        niri msg output DP-1 scale 1.0 >> "$LOG" 2>&1 || true
         niri msg output DP-1 position set 0 0 >> "$LOG" 2>&1 || true
         niri msg action focus-monitor DP-1 >> "$LOG" 2>&1 || true
         niri msg output DP-3 off >> "$LOG" 2>&1 || true

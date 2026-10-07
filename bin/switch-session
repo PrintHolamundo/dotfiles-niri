@@ -362,6 +362,7 @@ if [ "$EUID" -ne 0 ]; then
     if [ "$CURRENT_RUNNING" = "niri" ] || pgrep -u "$CURRENT_USER" -x niri >/dev/null 2>&1; then
         systemctl --user stop niri.service 2>/dev/null || true
         pkill -u "$CURRENT_USER" -x niri 2>/dev/null || true
+        pkill -u "$CURRENT_USER" -x dms 2>/dev/null || true
         pkill -u "$CURRENT_USER" -x noctalia 2>/dev/null || true
     fi
 
@@ -392,11 +393,13 @@ if [ "$NEW_SESSION" = "plasma" ]; then
     pkill -u "$CURRENT_USER" -x qs 2>/dev/null || true
     pkill -u "$CURRENT_USER" -x quickshell 2>/dev/null || true
     pkill -u "$CURRENT_USER" -x niri 2>/dev/null || true
+    pkill -u "$CURRENT_USER" -x dms 2>/dev/null || true
     pkill -u "$CURRENT_USER" -x noctalia 2>/dev/null || true
 elif [ "$NEW_SESSION" = "hyprland" ]; then
     pkill -u "$CURRENT_USER" -x kwin_wayland 2>/dev/null || true
     pkill -u "$CURRENT_USER" -x plasmashell 2>/dev/null || true
     pkill -u "$CURRENT_USER" -x niri 2>/dev/null || true
+    pkill -u "$CURRENT_USER" -x dms 2>/dev/null || true
     pkill -u "$CURRENT_USER" -x noctalia 2>/dev/null || true
 elif [ "$NEW_SESSION" = "niri" ]; then
     pkill -u "$CURRENT_USER" -x kwin_wayland 2>/dev/null || true

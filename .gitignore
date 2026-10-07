@@ -4,6 +4,17 @@
 *.bak
 dotfiles_backup_*
 
+# Python cache
+__pycache__/
+*.py[cod]
+
+# CopyQ runtime state
+.config/copyq/*.dat
+.config/copyq/*.lock
+.config/copyq/*.pub
+.config/copyq/copyq_geometry.ini
+.config/copyq/copyq-monitor.ini
+
 # OS / Editor specific
 .DS_Store
 .vscode/

@@ -23,7 +23,7 @@
     }
 
     debug {
-        // Allows notification actions and window activation from Noctalia.
+        // Allows notification actions and window activation from shell (DMS).
         honor-xdg-activation-with-invalid-serial
     }
 

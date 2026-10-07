@@ -38,5 +38,4 @@ else
     MSG="No se pudo obtener información de los periféricos."
 fi
 
-# Mostrar notificación en la pantalla
-noctalia msg notification-show "Batería de Dispositivos" "$MSG" 2>/dev/null || notify-send "Batería de Dispositivos" "$MSG" -i battery
+notify-send "Batería de Dispositivos" "$MSG" -i battery
