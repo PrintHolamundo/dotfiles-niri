@@ -220,7 +220,23 @@ main() {
     info "Desplegando configuración de CopyQ..."
     deploy_file "$DOTFILES_DIR/.config/copyq" "$HOME/.config/copyq"
 
-    # 5. Desplegar scripts en ~/.local/bin
+    # 5. Desplegar variables de entorno y overrides de DMS
+    if [ -d "$DOTFILES_DIR/.config/environment.d" ]; then
+        info "Desplegando variables de entorno en ~/.config/environment.d..."
+        deploy_file "$DOTFILES_DIR/.config/environment.d" "$HOME/.config/environment.d"
+    fi
+    if [ -d "$DOTFILES_DIR/.config/systemd/user/dms.service.d" ]; then
+        info "Desplegando overrides de DMS en ~/.config/systemd/user/dms.service.d..."
+        deploy_file "$DOTFILES_DIR/.config/systemd/user/dms.service.d" "$HOME/.config/systemd/user/dms.service.d"
+    fi
+
+    # 6. Desplegar parches de DankMaterialShell si está disponible
+    if command -v dms >/dev/null 2>&1 && [ -f "$DOTFILES_DIR/dms/apply-dms-patches.sh" ]; then
+        info "Aplicando parches de periféricos para DMS..."
+        "$DOTFILES_DIR/dms/apply-dms-patches.sh" || true
+    fi
+
+    # 7. Desplegar scripts en ~/.local/bin
     info "Desplegando scripts en $HOME/.local/bin..."
     for file in "$DOTFILES_DIR"/bin/*; do
         local basename
