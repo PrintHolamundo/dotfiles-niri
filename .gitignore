@@ -1,0 +1,11 @@
+# Logs & backups
+*.log
+*.tmp
+*.bak
+dotfiles_backup_*
+
+# OS / Editor specific
+.DS_Store
+.vscode/
+.idea/
+*~

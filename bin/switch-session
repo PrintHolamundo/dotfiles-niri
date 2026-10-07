@@ -1,0 +1,412 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+CURRENT_USER="devharo"
+USER_UID=$(id -u "$CURRENT_USER" 2>/dev/null || echo 1000)
+USER_RUNTIME="/run/user/$USER_UID"
+
+# If invoked inside Sunshine's cgroup, detach into a new systemd user scope so that
+# stopping Sunshine does not terminate this script prematurely!
+if [ "$EUID" -ne 0 ] && grep -q "Sunshine.service" /proc/self/cgroup 2>/dev/null; then
+    exec systemd-run --user --scope --description="Switch Session Runner" "$0" "$@"
+fi
+
+if [ "${1:-}" = "--init-autologin-last" ]; then
+    if [ "$EUID" -ne 0 ]; then
+        exec sudo "$0" "$@"
+    fi
+    cat << EOF > /etc/sddm.conf.d/autologin.conf
+[Autologin]
+User=$CURRENT_USER
+Session=
+EOF
+    mkdir -p /var/lib/sddm
+    cat << EOF > /var/lib/sddm/state.conf
+[Last]
+User=$CURRENT_USER
+Session=/usr/share/wayland-sessions/niri.desktop
+EOF
+    chown sddm:sddm /var/lib/sddm/state.conf 2>/dev/null || true
+    echo "Autologin configurado para recordar la última sesión (actual: niri)."
+    exit 0
+fi
+
+if [ "${1:-}" = "--configure-greeter" ]; then
+    if [ "$EUID" -ne 0 ]; then
+        exec sudo "$0" --configure-greeter
+    fi
+
+    echo "== Configurando SDDM greeter para desactivar HDMI, fijar DP-1 y habilitar cursor del mouse =="
+    
+    # 1. Backup original ryoku-greeter if not already done
+    if [ -f /usr/share/ryoku/lockscreen/ryoku-greeter ] && [ ! -f /usr/share/ryoku/lockscreen/ryoku-greeter.orig ]; then
+        cp -p /usr/share/ryoku/lockscreen/ryoku-greeter /usr/share/ryoku/lockscreen/ryoku-greeter.orig
+    fi
+
+    # 2. Write new /usr/local/bin/ryoku-greeter with [shell] cursor configuration
+    cat << 'GREETER_EOF' > /usr/local/bin/ryoku-greeter
+#!/usr/bin/env bash
+#
+# ryoku-greeter: the SDDM Wayland greeter compositor.
+# Customized to disable HDMI, enforce DP-1 primary output, and ensure white cursor visibility.
+set -u
+
+export XCURSOR_THEME="Breeze_Light"
+export XCURSOR_SIZE="32"
+export XCURSOR_PATH="/usr/share/icons"
+
+kb_conf=/etc/X11/xorg.conf.d/00-keyboard.conf
+if [ -r "$kb_conf" ]; then
+  xkb_opt() { sed -n "s/.*Option[[:space:]]*\"$1\"[[:space:]]*\"\([^\"]*\)\".*/\1/p" "$kb_conf" | head -n1; }
+  layout=$(xkb_opt XkbLayout); layout=${layout%%,*}
+  if [ -n "$layout" ]; then
+    export XKB_DEFAULT_LAYOUT="$layout"
+    variant=$(xkb_opt XkbVariant); variant=${variant%%,*}
+    [ -n "$variant" ] && export XKB_DEFAULT_VARIANT="$variant"
+    options=$(xkb_opt XkbOptions)
+    [ -n "$options" ] && export XKB_DEFAULT_OPTIONS="$options"
+  fi
+fi
+
+weston_plain() {
+  local fallback_ini
+  fallback_ini="$(mktemp --tmpdir ryoku-greeter-fb.XXXXXX.ini 2>/dev/null || echo '')"
+  if [ -n "$fallback_ini" ]; then
+    cat << FB_EOF > "$fallback_ini"
+[shell]
+cursor-theme=$XCURSOR_THEME
+cursor-size=$XCURSOR_SIZE
+
+[output]
+name=HDMI-A-1
+mode=off
+FB_EOF
+    exec weston --shell=kiosk --config="$fallback_ini" "$@"
+  fi
+  exec weston --shell=kiosk "$@"
+}
+
+command -v weston >/dev/null 2>&1 || { echo "ryoku-greeter: weston not found" >&2; exit 127; }
+command -v modetest >/dev/null 2>&1 || weston_plain "$@"
+
+probe_modes() {
+  modetest -c 2>/dev/null | awk '
+    /^Connectors:/ { insec = 1; next }
+    /^(CRTCs|Encoders|Planes|Framebuffers):/ { insec = 0 }
+    !insec { next }
+    $3 == "connected"    { conn = $4; next }
+    $3 == "disconnected" { conn = "";  next }
+    conn != "" && $1 ~ /^#[0-9]+$/ {
+      split($2, wh, "x"); w = wh[1] + 0; h = wh[2] + 0; rr = $3 + 0
+      if (w <= 0 || h <= 0 || rr <= 0) next
+      area = w * h
+      if (area > ba[conn] || (area == ba[conn] && rr > br[conn])) {
+        ba[conn] = area; br[conn] = rr; bw[conn] = w; bh[conn] = h; brs[conn] = $3
+      }
+    }
+    END { for (c in bw) printf "%s %d %d %s\n", c, bw[c], bh[c], brs[c] }
+  '
+}
+
+gen_ini() {
+  # Configure shell with white cursor theme and size 32
+  printf '[shell]\ncursor-theme=%s\ncursor-size=%s\n\n' "$XCURSOR_THEME" "$XCURSOR_SIZE"
+
+  local hdmi_seen=0
+  local dp3_seen=0
+  while read -r name w h rr; do
+    [ -n "$name" ] && [ "${w:-0}" -gt 0 ] && [ "${h:-0}" -gt 0 ] || continue
+    if [[ "$name" =~ ^HDMI ]] || [ "$name" = "DP-3" ]; then
+      printf '[output]\nname=%s\nmode=off\n\n' "$name"
+      [ "$name" = "HDMI-A-1" ] && hdmi_seen=1
+      [ "$name" = "DP-3" ] && dp3_seen=1
+    else
+      printf '[output]\nname=%s\nmode=%sx%s@%s\n\n' "$name" "$w" "$h" "$rr"
+    fi
+  done <<< "$modes"
+  if [ "$hdmi_seen" -eq 0 ]; then
+    printf '[output]\nname=HDMI-A-1\nmode=off\n\n'
+  fi
+  if [ "$dp3_seen" -eq 0 ]; then
+    printf '[output]\nname=DP-3\nmode=off\n\n'
+  fi
+}
+
+if [ "${RYOKU_GREETER_DRYRUN:-0}" = 1 ]; then
+  modes="$(probe_modes)"
+  gen_ini
+  exit 0
+fi
+
+settle="${RYOKU_GREETER_SETTLE:-1}"
+deadline="${RYOKU_GREETER_DEADLINE:-6}"
+start=$SECONDS
+modes=""
+last=-1
+while :; do
+  modes="$(probe_modes)"
+  n=$(printf '%s' "$modes" | awk 'NF { c++ } END { print c + 0 }')
+  elapsed=$(( SECONDS - start ))
+  [ "$elapsed" -ge "$deadline" ] && break
+  [ "$n" -gt 0 ] && [ "$n" -eq "$last" ] && [ "$elapsed" -ge "$settle" ] && break
+  last="$n"
+  sleep 0.3
+done
+
+[ -n "$modes" ] || weston_plain "$@"
+
+ini="$(mktemp --tmpdir ryoku-greeter.XXXXXX.ini 2>/dev/null)" || weston_plain "$@"
+gen_ini > "$ini"
+[ -s "$ini" ] || weston_plain "$@"
+
+exec weston --shell=kiosk --config="$ini" "$@"
+GREETER_EOF
+
+    chmod 755 /usr/local/bin/ryoku-greeter
+    cp -p /usr/local/bin/ryoku-greeter /usr/share/ryoku/lockscreen/ryoku-greeter
+
+    # 3. Create clean SDDM drop-ins with explicit CursorTheme & CursorSize (Breeze_Light 32)
+    cat << 'EOF_SDDM1' > /etc/sddm.conf.d/10-ryoku-wayland.conf
+[General]
+DisplayServer=wayland
+GreeterEnvironment=QT_QPA_PLATFORM=wayland,XCURSOR_THEME=Breeze_Light,XCURSOR_SIZE=32,XCURSOR_PATH=/usr/share/icons,QML_XHR_ALLOW_FILE_READ=1
+
+[Wayland]
+CompositorCommand=/usr/local/bin/ryoku-greeter
+
+[Theme]
+CursorTheme=Breeze_Light
+CursorSize=32
+EOF_SDDM1
+
+    cat << 'EOF_SDDM2' > /etc/sddm.conf.d/99-ryoku.conf
+[Theme]
+Current=ryoku
+CursorTheme=Breeze_Light
+CursorSize=32
+EOF_SDDM2
+
+    rm -f /etc/sddm.conf.d/*.bak
+
+    # 4. Ensure system-wide default cursor inherits Breeze_Light
+    if [ -f /usr/share/icons/default/index.theme ] && [ ! -f /usr/share/icons/default/index.theme.orig ]; then
+        cp -p /usr/share/icons/default/index.theme /usr/share/icons/default/index.theme.orig
+    fi
+    cat << 'EOF_DEF_THEME' > /usr/share/icons/default/index.theme
+[Icon Theme]
+Inherits=Breeze_Light
+EOF_DEF_THEME
+
+    # 5. Ensure SDDM user config has cursorTheme set to Breeze_Light 32
+    mkdir -p /var/lib/sddm/.config /var/lib/sddm/.icons/default
+    cat << 'EOF_KCM' > /var/lib/sddm/.config/kcminputrc
+[Mouse]
+cursorSize=32
+cursorTheme=Breeze_Light
+EOF_KCM
+
+    cat << 'EOF_SDDM_ICON' > /var/lib/sddm/.icons/default/index.theme
+[Icon Theme]
+Inherits=Breeze_Light
+EOF_SDDM_ICON
+    chown -R sddm:sddm /var/lib/sddm/.config /var/lib/sddm/.icons 2>/dev/null || true
+
+    # 6. Fix Main.qml: white cursor, contrast and clickable elements
+    QML_FILE="/usr/share/sddm/themes/ryoku/Main.qml"
+    if [ -f "$QML_FILE" ]; then
+        if [ ! -f "$QML_FILE.orig" ]; then
+            cp -p "$QML_FILE" "$QML_FILE.orig"
+        fi
+        python3 - << 'PY_EOF'
+with open('/usr/share/sddm/themes/ryoku/Main.qml', 'r') as f:
+    content = f.read()
+
+# 1. Wayland Cursor Fix
+old_wayland_fix = """    // Wayland Cursor Fix
+    MouseArea {
+        anchors.fill: parent
+        cursorShape: Qt.ArrowCursor
+        z: -1
+    }"""
+
+new_wayland_fix = """    // Wayland Cursor Fix
+    MouseArea {
+        anchors.fill: parent
+        cursorShape: Qt.ArrowCursor
+        hoverEnabled: true
+        acceptedButtons: Qt.NoButton
+    }"""
+
+if old_wayland_fix in content:
+    content = content.replace(old_wayland_fix, new_wayland_fix)
+
+# 2. Brighten dimText and UI contrast for dark background
+content = content.replace('readonly property color dimText: isLight ? "#666666" : "#666666"', 'readonly property color dimText: isLight ? "#666666" : "#cccccc"')
+content = content.replace('readonly property color subColor: isLight ? "#666666" : "#555555"', 'readonly property color subColor: isLight ? "#666666" : "#888888"')
+content = content.replace('readonly property color userItemInactive: isLight ? "#cccccc" : "#444"', 'readonly property color userItemInactive: isLight ? "#cccccc" : "#888888"')
+
+with open('/usr/share/sddm/themes/ryoku/Main.qml', 'w') as f:
+    f.write(content)
+print("Main.qml updated with high-contrast colors and cursor fix.")
+PY_EOF
+    fi
+
+    echo "Configuración aplicada exitosamente en /usr/local/bin/ryoku-greeter, /etc/sddm.conf.d/ y Main.qml."
+    exit 0
+fi
+
+# 1. Determine target session
+TARGET="${1:-toggle}"
+
+if [ "$TARGET" = "--apply" ]; then
+    TARGET="${2:-toggle}"
+fi
+
+# Detect what is currently running
+CURRENT_RUNNING=""
+if pgrep -u "$CURRENT_USER" -x kwin_wayland >/dev/null 2>&1; then
+    CURRENT_RUNNING="kde"
+elif pgrep -u "$CURRENT_USER" -x Hyprland >/dev/null 2>&1; then
+    CURRENT_RUNNING="hyprland"
+elif pgrep -u "$CURRENT_USER" -x niri >/dev/null 2>&1; then
+    CURRENT_RUNNING="niri"
+else
+    CURRENT_CONF=$(grep -E "^Session=" /etc/sddm.conf.d/autologin.conf 2>/dev/null | cut -d'=' -f2 || echo "")
+    if [[ "$CURRENT_CONF" =~ [Hh]yprland ]]; then
+        CURRENT_RUNNING="hyprland"
+    elif [[ "$CURRENT_CONF" =~ [Nn]iri ]]; then
+        CURRENT_RUNNING="niri"
+    else
+        CURRENT_RUNNING="kde"
+    fi
+fi
+
+if [ "$TARGET" = "toggle" ]; then
+    if [ "$CURRENT_RUNNING" = "hyprland" ]; then
+        TARGET="kde"
+    elif [ "$CURRENT_RUNNING" = "kde" ]; then
+        TARGET="niri"
+    else
+        TARGET="hyprland"
+    fi
+fi
+
+if [[ "$TARGET" =~ [Kk][Dd][Ee] ]] || [ "$TARGET" = "plasma" ]; then
+    NEW_SESSION="plasma"
+    DISPLAY_NAME="KDE Plasma"
+elif [[ "$TARGET" =~ [Hh]yprland ]]; then
+    NEW_SESSION="hyprland"
+    DISPLAY_NAME="Hyprland"
+elif [[ "$TARGET" =~ [Nn]iri ]]; then
+    NEW_SESSION="niri"
+    DISPLAY_NAME="Niri"
+else
+    echo "Uso: switch-session [kde | hyprland | niri | toggle]"
+    exit 1
+fi
+
+echo "=== Iniciando cambio de sesión a $DISPLAY_NAME ($NEW_SESSION) ==="
+
+# 2. Cleanup displays and stop outgoing session components in user space
+if [ "$EUID" -ne 0 ]; then
+    echo "1. Restaurando pantalla física (DP-1) y limpiando pantallas virtuales..."
+    
+    # Clean up Hyprland if active
+    if [ "$CURRENT_RUNNING" = "hyprland" ] || pgrep -u "$CURRENT_USER" -x Hyprland >/dev/null 2>&1; then
+        hyprctl dispatch "hl.dsp.dpms({ action=\"on\", monitor=\"DP-1\" })" 2>/dev/null || true
+        hyprctl output remove HEADLESS-1 2>/dev/null || true
+        pkill -CONT -x hypridle 2>/dev/null || true
+    fi
+
+    # Clean up KDE if active
+    if [ "$CURRENT_RUNNING" = "kde" ] || pgrep -u "$CURRENT_USER" -x kwin_wayland >/dev/null 2>&1; then
+        pkill -f "krfb-virtualmonitor" 2>/dev/null || true
+        rm -f /tmp/sunshine-vmon.pid
+        timeout 3 kscreen-doctor output.DP-1.enable output.DP-1.mode.3440x1440@144 output.DP-3.disable 2>/dev/null || true
+    fi
+
+    # Clean up Niri if active
+    if [ "$CURRENT_RUNNING" = "niri" ] || pgrep -u "$CURRENT_USER" -x niri >/dev/null 2>&1; then
+        niri msg output DP-1 on 2>/dev/null || true
+        niri msg output DP-3 off 2>/dev/null || true
+        niri msg action quit --skip-confirmation 2>/dev/null || true
+    fi
+
+    # 3. Stop Sunshine cleanly to disconnect Moonlight stream
+    echo "2. Deteniendo Sunshine para cerrar stream en MacBook..."
+    systemctl --user stop app-dev.lizardbyte.app.Sunshine.service sunshine.service 2>/dev/null || true
+    pkill -u "$CURRENT_USER" -x sunshine 2>/dev/null || true
+
+    # 4. Stop outgoing graphical session and compositor
+    echo "3. Cerrando sesión gráfica saliente..."
+    systemctl --user stop graphical-session.target 2>/dev/null || true
+    
+    if [ "$CURRENT_RUNNING" = "kde" ] || pgrep -u "$CURRENT_USER" -x kwin_wayland >/dev/null 2>&1; then
+        systemctl --user stop "plasma*" 2>/dev/null || true
+        pkill -u "$CURRENT_USER" -x kwin_wayland 2>/dev/null || true
+        pkill -u "$CURRENT_USER" -x plasmashell 2>/dev/null || true
+    fi
+
+    if [ "$CURRENT_RUNNING" = "hyprland" ] || pgrep -u "$CURRENT_USER" -x Hyprland >/dev/null 2>&1; then
+        hyprctl dispatch exit 2>/dev/null || true
+        systemctl --user stop hyprland-session.target ryoku-session.target ryoku-shell.service ryoku-idle.service ryogami.service 2>/dev/null || true
+        systemctl --user unset-environment HYPRLAND_INSTANCE_SIGNATURE 2>/dev/null || true
+        pkill -u "$CURRENT_USER" -x Hyprland 2>/dev/null || true
+        pkill -u "$CURRENT_USER" -x ryoku-shell 2>/dev/null || true
+        pkill -u "$CURRENT_USER" -x qs 2>/dev/null || true
+        pkill -u "$CURRENT_USER" -x quickshell 2>/dev/null || true
+        pkill -u "$CURRENT_USER" -x ryogami 2>/dev/null || true
+        pkill -u "$CURRENT_USER" -x hypridle 2>/dev/null || true
+    fi
+
+    if [ "$CURRENT_RUNNING" = "niri" ] || pgrep -u "$CURRENT_USER" -x niri >/dev/null 2>&1; then
+        systemctl --user stop niri.service 2>/dev/null || true
+        pkill -u "$CURRENT_USER" -x niri 2>/dev/null || true
+        pkill -u "$CURRENT_USER" -x noctalia 2>/dev/null || true
+    fi
+
+    # Auto-escalate to root for SDDM configuration
+    exec sudo "$0" --apply "$NEW_SESSION"
+fi
+
+# 5. Root phase (--apply)
+echo "4. Configurando autologin en SDDM para recordar última sesión: $DISPLAY_NAME ($NEW_SESSION)..."
+cat << EOF > /etc/sddm.conf.d/autologin.conf
+[Autologin]
+User=$CURRENT_USER
+Session=
+EOF
+
+mkdir -p /var/lib/sddm
+cat << EOF > /var/lib/sddm/state.conf
+[Last]
+User=$CURRENT_USER
+Session=/usr/share/wayland-sessions/${NEW_SESSION}.desktop
+EOF
+chown sddm:sddm /var/lib/sddm/state.conf 2>/dev/null || true
+
+# Ensure all remnants of old sessions are killed
+if [ "$NEW_SESSION" = "plasma" ]; then
+    pkill -u "$CURRENT_USER" -x Hyprland 2>/dev/null || true
+    pkill -u "$CURRENT_USER" -x ryoku-shell 2>/dev/null || true
+    pkill -u "$CURRENT_USER" -x qs 2>/dev/null || true
+    pkill -u "$CURRENT_USER" -x quickshell 2>/dev/null || true
+    pkill -u "$CURRENT_USER" -x niri 2>/dev/null || true
+    pkill -u "$CURRENT_USER" -x noctalia 2>/dev/null || true
+elif [ "$NEW_SESSION" = "hyprland" ]; then
+    pkill -u "$CURRENT_USER" -x kwin_wayland 2>/dev/null || true
+    pkill -u "$CURRENT_USER" -x plasmashell 2>/dev/null || true
+    pkill -u "$CURRENT_USER" -x niri 2>/dev/null || true
+    pkill -u "$CURRENT_USER" -x noctalia 2>/dev/null || true
+elif [ "$NEW_SESSION" = "niri" ]; then
+    pkill -u "$CURRENT_USER" -x kwin_wayland 2>/dev/null || true
+    pkill -u "$CURRENT_USER" -x plasmashell 2>/dev/null || true
+    pkill -u "$CURRENT_USER" -x Hyprland 2>/dev/null || true
+    pkill -u "$CURRENT_USER" -x ryoku-shell 2>/dev/null || true
+    pkill -u "$CURRENT_USER" -x qs 2>/dev/null || true
+    pkill -u "$CURRENT_USER" -x quickshell 2>/dev/null || true
+fi
+
+echo "5. Reiniciando SDDM..."
+systemctl restart sddm.service
+echo "=== Cambio completado. El nuevo escritorio iniciará en breve. ==="

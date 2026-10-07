@@ -1,0 +1,94 @@
+    window-rule {
+        geometry-corner-radius 20 // Set every window radius to 20
+        clip-to-geometry true
+    }
+
+    window-rule {
+        background-effect {
+          blur true
+          xray false
+        }
+    }
+
+    window-rule {
+        match app-id=r#"^kitty$"#
+        default-column-width { proportion 0.5; }
+    }
+
+    // Floating Noctalia settings window.
+    window-rule {
+        match app-id="dev.noctalia.Noctalia"
+        open-floating true
+        default-column-width { fixed 1080; }
+        default-window-height { fixed 920; }
+    }
+
+    // Floating Brave Gemini (Scratchpad pantalla completa flotante con transparencia suave)
+    window-rule {
+        match app-id=r#"brave-gemini\.google\.com"#
+        open-floating true
+        default-column-width { proportion 1.0; }
+        default-window-height { proportion 1.0; }
+        default-floating-position x=0 y=0 relative-to="top-left"
+        opacity 0.88
+    }
+
+    // Floating Kitty Terminal (Scratchpad pantalla completa flotante)
+    window-rule {
+        match app-id=r#"^kitty-scratchpad$"#
+        open-floating true
+        default-column-width { proportion 1.0; }
+        default-window-height { proportion 1.0; }
+        default-floating-position x=0 y=0 relative-to="top-left"
+    }
+
+    // Floating System Monitor btop (Scratchpad Super + Esc)
+    window-rule {
+        match app-id=r#"^btop-system$"#
+        open-floating true
+        default-column-width { proportion 0.85; }
+        default-window-height { proportion 0.85; }
+    }
+
+    // Floating Ryotunes (Scratchpad pantalla completa flotante con transparencia suave)
+    window-rule {
+        match app-id=r#"^org\.quickshell$"# title=r#"^Ryotunes"#
+        match app-id=r#"^ryotunes$"#
+        open-floating true
+        default-column-width { proportion 1.0; }
+        default-window-height { proportion 1.0; }
+        default-floating-position x=0 y=0 relative-to="top-left"
+        opacity 0.88
+    }
+
+    // Omnissa Horizon Client (Ancho exacto de 1625px)
+    window-rule {
+        match app-id=r#"^(horizon-client|vmware-view)$"#
+        default-column-width { fixed 1625; }
+    }
+
+    // if you use steam you will probably like these
+    window-rule {
+        match app-id="steam"
+        exclude title=r#"^[Ss]team$"#
+        open-floating true
+    }
+
+    window-rule {
+       match app-id="steam" title=r#"^notificationtoasts_\d+_desktop$"#
+       default-floating-position x=10 y=10 relative-to="bottom-right"
+       open-focused false
+    }
+
+    layer-rule {
+        match namespace="^noctalia-wallpaper"
+        place-within-backdrop true
+    }
+
+    layer-rule {
+        match namespace="^noctalia-(bar-[^\"]+|notification|dock|panel|attached-panel|osd)$"
+        background-effect {
+          xray false
+          // blur false
+        }
+    }
