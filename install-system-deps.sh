@@ -58,6 +58,8 @@ sudo dnf install -y \
   pipewire-pulseaudio \
   wireplumber \
   pciutils \
+  solaar \
+  headsetcontrol \
   gh \
   jq
 

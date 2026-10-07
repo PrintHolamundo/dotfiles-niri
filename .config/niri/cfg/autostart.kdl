@@ -3,3 +3,4 @@
 
     spawn-at-startup "niri-headless-check.sh"
     spawn-at-startup "copyq" "--start-server"
+    spawn-at-startup "solaar" "-w" "hide"

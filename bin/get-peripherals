@@ -1,0 +1,107 @@
+#!/usr/bin/env python3
+import os
+import sys
+import json
+import subprocess
+import warnings
+
+# Suppress stderr noise from solaar/logitech_receiver
+warnings.filterwarnings("ignore")
+
+def main():
+    cache_dir = os.path.expanduser("~/.local/state/ryoku")
+    os.makedirs(cache_dir, exist_ok=True)
+    cache_file = os.path.join(cache_dir, "peripheral_battery_cache.json")
+
+    data = {
+        "MX Master 3S": {"level": "N/A", "status": "Desconocido", "charging": False, "online": False},
+        "G535 Gaming Headset": {"level": "N/A", "status": "Apagado", "charging": False, "online": False},
+        "K400 Plus": {"level": "N/A", "status": "Desconocido", "charging": False, "online": False}
+    }
+
+    # Load existing cache if available so we keep last known state as fallback
+    if os.path.exists(cache_file):
+        try:
+            with open(cache_file, "r") as f:
+                existing = json.load(f)
+                for k in data:
+                    if k in existing:
+                        data[k] = existing[k]
+        except Exception:
+            pass
+
+    # 1. Logitech devices via solaar / logitech_receiver
+    try:
+        from solaar.cli import _receivers_and_devices
+        from logitech_receiver import receiver
+
+        # Redirect fd 2 temporarily to suppress hidraw stderr prints
+        stderr_fd = os.dup(2)
+        devnull_fd = os.open(os.devnull, os.O_WRONLY)
+        os.dup2(devnull_fd, 2)
+        os.close(devnull_fd)
+
+        try:
+            for d in _receivers_and_devices():
+                dev_list = []
+                if isinstance(d, receiver.Receiver):
+                    dev_list = list(d)
+                else:
+                    dev_list = [d]
+
+                for dev in dev_list:
+                    name = getattr(dev, "name", "")
+                    b = dev.battery()
+                    if "MX Master" in name:
+                        key = "MX Master 3S"
+                    elif "K400" in name:
+                        key = "K400 Plus"
+                    elif "G535" in name:
+                        key = "G535 Gaming Headset"
+                    else:
+                        key = name
+
+                    if key in data and b is not None and b.level is not None:
+                        st_str = str(b.status)
+                        chg = "CHARGING" in st_str and "DISCHARGING" not in st_str
+                        data[key] = {
+                            "level": str(int(b.level)),
+                            "status": "Cargando" if chg else "En uso",
+                            "charging": chg,
+                            "online": True
+                        }
+        finally:
+            os.dup2(stderr_fd, 2)
+            os.close(stderr_fd)
+    except Exception:
+        pass
+
+    # 2. Logitech G535 Headset via headsetcontrol
+    try:
+        res = subprocess.run(["headsetcontrol", "-b", "-o", "JSON"], capture_output=True, text=True, timeout=2)
+        if res.returncode == 0:
+            hs_json = json.loads(res.stdout)
+            for dev in hs_json.get("devices", []):
+                bat = dev.get("battery", {})
+                st = bat.get("status", "")
+                lvl = bat.get("level", -1)
+                if st in ["BATTERY_AVAILABLE", "BATTERY_CHARGING"] and lvl >= 0:
+                    data["G535 Gaming Headset"] = {
+                        "level": str(lvl),
+                        "status": "Cargando" if st == "BATTERY_CHARGING" else "En uso",
+                        "charging": (st == "BATTERY_CHARGING"),
+                        "online": True
+                    }
+                else:
+                    data["G535 Gaming Headset"]["online"] = False
+                    data["G535 Gaming Headset"]["status"] = "Apagado"
+    except Exception:
+        pass
+
+    with open(cache_file, "w") as f:
+        json.dump(data, f, indent=2)
+
+    return 0
+
+if __name__ == "__main__":
+    sys.exit(main())

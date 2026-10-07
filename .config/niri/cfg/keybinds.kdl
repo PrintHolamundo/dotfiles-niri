@@ -43,6 +43,7 @@ binds {
     Mod+Page_Down                       hotkey-overlay-title="Audio: Blue Microphones" { spawn "audio_blue.sh"; }
     Mod+Page_Up                         hotkey-overlay-title="Audio: Bocinas" { spawn "audio_bocinas.sh"; }
     Mod+Home                            hotkey-overlay-title="Audio: Audífonos Logitech G535" { spawn "audio_audifonos.sh"; }
+    Mod+Alt+B                           hotkey-overlay-title="Batería: Consultar estado de periféricos" { spawn "show-batteries.sh"; }
 
     // ─── Voice Dictation / Autotranscript ───
     Mod+Shift+Page_Down                 hotkey-overlay-title="AutoTranscript (Python Script)" { spawn-sh "kitty -e \"$HOME/AutoTranscript/run.sh\""; }

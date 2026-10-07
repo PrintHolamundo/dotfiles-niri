@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 
 # Refrescar estado de los periféricos en segundo plano
-if [ -x "$HOME/.config/quickshell/shell/services/get-peripherals" ]; then
+if command -v get-peripherals >/dev/null 2>&1; then
+    get-peripherals >/dev/null 2>&1
+elif [ -x "$HOME/.local/bin/get-peripherals" ]; then
+    "$HOME/.local/bin/get-peripherals" >/dev/null 2>&1
+elif [ -x "$HOME/.config/quickshell/shell/services/get-peripherals" ]; then
     "$HOME/.config/quickshell/shell/services/get-peripherals" >/dev/null 2>&1
 fi
 

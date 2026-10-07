@@ -124,6 +124,8 @@ install_packages() {
                 btop
                 fuzzel
                 nautilus
+                solaar
+                headsetcontrol
                 gh
                 python3
             )

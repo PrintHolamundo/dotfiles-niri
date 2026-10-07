@@ -119,8 +119,10 @@ chmod +x install.sh install-system-deps.sh
 - **`switch-session`**: Utilidad para alternar de manera limpia entre escritorios (Niri, Hyprland, KDE Plasma) configurando SDDM autologin.
 
 ### ⚡ Herramientas y Productividad
+- **`get-peripherals`**: Consulta el nivel de batería real de hardware Logitech (MX Master 3S, K400 Plus vía Solaar/HID++) y audífonos G535 (vía HeadsetControl) actualizando la caché local.
+- **`show-batteries.sh`** (`bateria`, `battery`, `Mod + Alt + B`): Genera y notifica visualmente el estado detallado de batería de todos los periféricos conectados.
+- **`solaar`** (`-w hide`): Autoiniciado en segundo plano para reflejar el estado e indicador de batería de periféricos Logitech en la bandeja del sistema (System Tray) de la barra.
 - **`ocr-grab`** (`Mod + Shift + T`): Permite seleccionar un área de la pantalla con `grim` + `slurp`, extraer el texto usando OCR (`tesseract` en español e inglés) y copiarlo al portapapeles al instante.
-- **`show-batteries.sh`**: Notifica y reporta los niveles de batería de periféricos conectados (mouse, audífonos, etc.).
 - **`rgb-controller.sh`**: Control por software de iluminación de periféricos vía OpenRGB.
 
 ---
@@ -150,6 +152,7 @@ chmod +x install.sh install-system-deps.sh
 | `Mod + T` | **Scratchpad:** Terminal Kitty flotante |
 | `Mod + G` | **Scratchpad:** Gemini AI (Brave App) |
 | `Mod + Escape` | **Scratchpad:** Monitor de sistema (`btop`) |
+| `Mod + Alt + B` | **Batería:** Consultar niveles de periféricos (mouse, audífonos, teclado) |
 | `Mod + P` | Selector interactivo de monitores |
 | `Mod + Shift + T` | **OCR:** Capturar y extraer texto de pantalla al portapapeles |
 
