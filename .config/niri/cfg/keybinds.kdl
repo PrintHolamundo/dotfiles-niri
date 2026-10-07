@@ -18,6 +18,8 @@ binds {
     // ─── Applications ───
     Mod+Return                          hotkey-overlay-title="Open Terminal: Kitty" { spawn "kitty"; }
     Mod+B                               hotkey-overlay-title="Open Browser: Brave" { spawn "brave"; }
+    Mod+V                               hotkey-overlay-title="Clipboard Manager: CopyQ" { spawn "copyq" "toggle"; }
+    Alt+V                               hotkey-overlay-title="Clipboard Manager: CopyQ" { spawn "copyq" "toggle"; }
     Mod+G                               hotkey-overlay-title="Toggle Gemini (Brave App)" { spawn "toggle_gemini.sh"; }
     Mod+T                               hotkey-overlay-title="Toggle Terminal: Kitty (Scratchpad)" { spawn "toggle_kitty.sh"; }
     Mod+N                               hotkey-overlay-title="Open Code Editor: VS Code" { spawn "code"; }

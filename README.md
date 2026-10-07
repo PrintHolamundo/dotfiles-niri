@@ -23,6 +23,10 @@ dotfiles-niri/
 │   │       ├── layout.kdl        # Espaciado (gaps), bordes, proporciones
 │   │       ├── misc.kdl          # Preferencias generales
 │   │       └── rules.kdl         # Reglas de ventanas (flotantes, scratchpads, tamaños)
+│   ├── copyq/                    # Gestor de portapapeles CopyQ
+│   │   ├── copyq.conf            # Configuración principal
+│   │   ├── copyq-commands.ini    # Comandos (encriptación, etiquetas, fijar)
+│   │   └── copyq_tabs.ini        # Definición de pestañas
 │   └── kitty/                    # Terminal Kitty
 │       ├── kitty.conf            # Configuración principal
 │       ├── user.conf             # Preferencias de usuario (transparencia, clic derecho Windows-style)
@@ -73,7 +77,7 @@ chmod +x install.sh
 ### Arch Linux / Arch-based (EndeavourOS, Manjaro, etc.)
 
 ```bash
-paru -S --needed niri kitty jq wl-clipboard grim slurp tesseract tesseract-data-eng tesseract-data-spa libnotify pipewire pipewire-pulse wireplumber btop python
+paru -S --needed niri kitty copyq jq wl-clipboard grim slurp tesseract tesseract-data-eng tesseract-data-spa libnotify pipewire pipewire-pulse wireplumber btop python
 ```
 
 ### Fedora
@@ -81,14 +85,14 @@ paru -S --needed niri kitty jq wl-clipboard grim slurp tesseract tesseract-data-
 ```bash
 # Habilitar repositorio copr de Niri
 sudo dnf copr enable yalter/niri
-sudo dnf install -y niri kitty jq wl-clipboard grim slurp tesseract libnotify pipewire-pulseaudio wireplumber btop python3
+sudo dnf install -y niri kitty copyq jq wl-clipboard grim slurp tesseract libnotify pipewire-pulseaudio wireplumber btop python3
 ```
 
 ### Debian / Ubuntu
 
 ```bash
 sudo apt update
-sudo apt install -y kitty jq wl-clipboard grim slurp tesseract-ocr libnotify-bin pulseaudio-utils btop python3
+sudo apt install -y kitty copyq jq wl-clipboard grim slurp tesseract-ocr libnotify-bin pulseaudio-utils btop python3
 # Para Niri, consulta la documentación oficial o descarga el binario/compila con cargo.
 ```
 
@@ -132,6 +136,7 @@ sudo apt install -y kitty jq wl-clipboard grim slurp tesseract-ocr libnotify-bin
 | `Mod + B` | Abrir navegador Brave |
 | `Mod + E` | Abrir explorador de archivos (Nautilus) |
 | `Mod + N` | Abrir editor de código (VS Code) |
+| `Mod + V` / `Alt + V` | **Portapapeles:** Toggle CopyQ flotante |
 | `Mod + T` | **Scratchpad:** Toggle terminal Kitty flotante |
 | `Mod + G` | **Scratchpad:** Toggle Gemini AI |
 | `Mod + Escape` | **Scratchpad:** Toggle monitor de sistema (`btop`) |

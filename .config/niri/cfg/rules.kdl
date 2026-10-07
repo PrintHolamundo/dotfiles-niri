@@ -15,6 +15,14 @@
         default-column-width { proportion 0.5; }
     }
 
+    // Floating CopyQ Clipboard Manager
+    window-rule {
+        match app-id=r#"^(com\.github\.hluk\.)?copyq$"#
+        open-floating true
+        default-column-width { fixed 650; }
+        default-window-height { fixed 550; }
+    }
+
     // Floating Noctalia settings window.
     window-rule {
         match app-id="dev.noctalia.Noctalia"

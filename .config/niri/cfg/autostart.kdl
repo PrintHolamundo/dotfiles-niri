@@ -3,3 +3,4 @@
 
     spawn-at-startup "noctalia"
     spawn-at-startup "niri-headless-check.sh"
+    spawn-at-startup "copyq" "--start-server"

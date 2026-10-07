@@ -79,6 +79,7 @@ install_packages() {
         local pkgs=(
             niri
             kitty
+            copyq
             jq
             wl-clipboard
             grim
@@ -106,6 +107,7 @@ install_packages() {
         info "Detectado Fedora. Verificando dependencias..."
         local pkgs=(
             kitty
+            copyq
             jq
             wl-clipboard
             grim
@@ -127,6 +129,7 @@ install_packages() {
         sudo apt update
         local pkgs=(
             kitty
+            copyq
             jq
             wl-clipboard
             grim
@@ -205,7 +208,11 @@ main() {
     info "Desplegando configuración de Kitty..."
     deploy_file "$DOTFILES_DIR/.config/kitty" "$HOME/.config/kitty"
 
-    # 4. Desplegar scripts en ~/.local/bin
+    # 4. Desplegar ~/.config/copyq
+    info "Desplegando configuración de CopyQ..."
+    deploy_file "$DOTFILES_DIR/.config/copyq" "$HOME/.config/copyq"
+
+    # 5. Desplegar scripts en ~/.local/bin
     info "Desplegando scripts en $HOME/.local/bin..."
     for file in "$DOTFILES_DIR"/bin/*; do
         local basename
